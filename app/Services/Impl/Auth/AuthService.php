@@ -161,20 +161,27 @@ class AuthService implements AuthServiceInterface
      */
     public function resetPassword(PasswordConfirmRequest $request, string $token = ''): bool
     {
-        if(!$tokenReset = $this->resetPasswordRepository->findValidToken($token)){
-            throw new TokenInvalidException(Lang::get('auth.invalid_token'));
-        }
-        if (Carbon::parse($tokenReset->updated_at)->addMinutes(self::RESET_TOKEN_TIME_TO_LIVE * 60)->isPast()) {
-            $tokenReset->delete();
-            throw new TokenExpiredException(Lang::get('auth.token_expired'));
-        }
-        if(!$user = $this->userRepositories->findByEmail($tokenReset->email)) {
-            throw new UserNotDefinedException(Lang::get('auth.not_found'));
-        }
+        DB::beginTransaction();
+        try {
+            if(!$tokenReset = $this->resetPasswordRepository->findValidToken($token)){
+                throw new TokenInvalidException(Lang::get('auth.invalid_token'));
+            }
+            if (Carbon::parse($tokenReset->updated_at)->addMinutes(self::RESET_TOKEN_TIME_TO_LIVE * 60)->isPast()) {
+                $tokenReset->delete();
+                throw new TokenExpiredException(Lang::get('auth.token_expired'));
+            }
+            if(!$user = $this->userRepositories->findByEmail($tokenReset->email)) {
+                throw new UserNotDefinedException(Lang::get('auth.not_found'));
+            }
 
-        $this->resetPasswordRepository->updatePassword($user, $request->input('password'));
-        $tokenReset->delete();
-        $this->refreshRepository->revokeAllUserRefreshTokenAll($user->id);
-        return true;
+            $this->resetPasswordRepository->updatePassword($user, $request->input('password'));
+            $tokenReset->delete();
+            $this->refreshRepository->revokeAllUserRefreshTokenAll($user->id);
+            DB::commit();
+            return true;
+        } catch (\Exception $e)
+        {
+            throw $e;
+        }
     }
 }
