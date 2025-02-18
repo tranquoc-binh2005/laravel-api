@@ -21,4 +21,9 @@ class BaseRepositories
     {
         return $this->model->with($relations)->find($id);
     }
+
+    public function findByEmail(string $email, array $relations = []): mixed
+    {
+        return $this->model->with($relations)->where('email', $email)->firstOrFail();
+    }
 }

@@ -5,9 +5,11 @@ use App\Enum\Config\ApiResponseKey;
 use App\Enum\Config\Common;
 use App\Http\Requests\Auth\AuthRequest;
 use App\Services\Interfaces\Auth\AuthServiceInterface;
+use Carbon\Carbon;
 use http\Exception\RuntimeException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Str;
@@ -19,18 +21,26 @@ use Illuminate\Support\Facades\DB;
 use App\Traits\Loggable;
 use App\Exceptions\SecurityException;
 use App\Repositories\User\UserRepositories;
+use App\Http\Requests\Auth\PasswordConfirmRequest;
+use App\Models\ResetPassword;
+use Tymon\JWTAuth\Exceptions\TokenInvalidException;
+use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+use App\Repositories\Auth\ResetPasswordRepositories;
 class AuthService implements AuthServiceInterface
 {
     use Loggable;
     private $auth;
 
     private RefreshTokenRepositories $refreshRepository;
+    private ResetPasswordRepositories $resetPasswordRepository;
     private UserRepositories $userRepositories;
     private const ACCESS_TOKEN_TIME_TO_LIVE = 5;
     private const REFRESH_TOKEN_TIME_TO_LIVE = 15;
+    private const RESET_TOKEN_TIME_TO_LIVE = 5;
     public function __construct(
-        RefreshTokenRepositories $refreshRepository,
-        UserRepositories $userRepositories,
+        RefreshTokenRepositories  $refreshRepository,
+        ResetPasswordRepositories $resetPasswordRepository,
+        UserRepositories          $userRepositories,
     )
     {
         /**
@@ -38,6 +48,7 @@ class AuthService implements AuthServiceInterface
          */
         $this->auth = auth(Common::API);
         $this->refreshRepository = $refreshRepository;
+        $this->resetPasswordRepository = $resetPasswordRepository;
         $this->userRepositories = $userRepositories;
     }
 
@@ -111,7 +122,6 @@ class AuthService implements AuthServiceInterface
         DB::beginTransaction();
         try {
             $refreshToken = $request->cookie(Common::REFRESH_TOKEN_COOKIE_NAME) ?? '';
-            $result = $this->refreshRepository->findValidRefreshToken($refreshToken);
             if(!$result = $this->refreshRepository->findValidRefreshToken($refreshToken)){
                 throw new ModelNotFoundException(Lang::get('auth.not_found'));
             }
@@ -142,5 +152,29 @@ class AuthService implements AuthServiceInterface
             return true;
         }
         return false;
+    }
+
+    /**
+     * @throws UserNotDefinedException
+     * @throws TokenExpiredException
+     * @throws TokenInvalidException
+     */
+    public function resetPassword(PasswordConfirmRequest $request, string $token = ''): bool
+    {
+        if(!$tokenReset = $this->resetPasswordRepository->findValidToken($token)){
+            throw new TokenInvalidException(Lang::get('auth.invalid_token'));
+        }
+        if (Carbon::parse($tokenReset->updated_at)->addMinutes(self::RESET_TOKEN_TIME_TO_LIVE * 60)->isPast()) {
+            $tokenReset->delete();
+            throw new TokenExpiredException(Lang::get('auth.token_expired'));
+        }
+        if(!$user = $this->userRepositories->findByEmail($tokenReset->email)) {
+            throw new UserNotDefinedException(Lang::get('auth.not_found'));
+        }
+
+        $this->resetPasswordRepository->updatePassword($user, $request->input('password'));
+        $tokenReset->delete();
+        $this->refreshRepository->revokeAllUserRefreshTokenAll($user->id);
+        return true;
     }
 }

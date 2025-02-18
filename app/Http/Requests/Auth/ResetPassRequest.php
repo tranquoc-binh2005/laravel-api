@@ -2,13 +2,10 @@
 
 namespace App\Http\Requests\Auth;
 
-use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Http\Exceptions\HttpResponseException;
-use App\Http\Resources\ApiResource;
-use Illuminate\Http\Response;
+use App\Http\Requests\BaseRequest;
+use Illuminate\Support\Facades\Lang;
 
-class AuthRequest extends FormRequest
+class ResetPassRequest extends BaseRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,18 +20,25 @@ class AuthRequest extends FormRequest
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
-    public function rules(): array{
+    public function rules(): array
+    {
         return [
-            'email' => 'string|email|required',
-            'password' => 'string|required|min:6',
+            'email' => 'required|email',
         ];
     }
-
     public function attributes(): array
     {
         return [
             'email' => 'Email',
-            'password' => 'Mật khẩu',
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'email.email' => Lang::get('validation.email'),
+            'email.required' => Lang::get('validation.required'),
+        ];
+    }
+
 }
