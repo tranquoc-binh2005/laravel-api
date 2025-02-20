@@ -1,9 +1,8 @@
 <?php
-namespace App\Enum\V1\Auth;
+namespace App\Http\Controllers\V1\Auth;
 
 use App\Enum\Config\ApiResponseKey;
 use App\Enum\Config\Common;
-use App\Exceptions\SecurityException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\AuthRequest;
 use App\Http\Requests\Auth\PasswordConfirmRequest;
@@ -17,6 +16,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\UnauthorizedException;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 use Tymon\JWTAuth\Exceptions\UserNotDefinedException;
 
@@ -67,10 +67,10 @@ class AuthController extends Controller {
             $response = $this->authService->refreshAccessToken($request);
             return ApiResource::ok($response[ApiResponseKey::DATA], Common::SUCCESS)
                 ->withCookie($response[ApiResponseKey::AUTH_COOKIE]);
-        } catch(SecurityException $e) {
-            return ApiResource::messages($e->getMessage(), Response::HTTP_FORBIDDEN);
         } catch (ModelNotFoundException $e) {
             return ApiResource::messages($e->getMessage(), Response::HTTP_NOT_FOUND);
+        } catch(UnauthorizedException $e){
+            return ApiResource::messages($e->getMessage(), Response::HTTP_UNAUTHORIZED);
         } catch (\Exception $e) {
             return $this->handleLogException($e);
         }

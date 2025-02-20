@@ -18,9 +18,4 @@ class ResetPasswordRepositories extends BaseRepositories
     {
         return $this->model->where('token', $refreshToken)->first();
     }
-
-    public function updatePassword(object $object = null, string $password = ''): void
-    {
-        $object->update(['password' => bcrypt($password)]);
-    }
 }

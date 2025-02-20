@@ -9,10 +9,10 @@ use Carbon\Carbon;
 use http\Exception\RuntimeException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Str;
+use Illuminate\Validation\UnauthorizedException;
 use Tymon\JWTAuth\Exceptions\UserNotDefinedException;
 use App\Models\RefreshToken;
 use Illuminate\Support\Facades\Cookie;
@@ -22,10 +22,11 @@ use App\Traits\Loggable;
 use App\Exceptions\SecurityException;
 use App\Repositories\User\UserRepositories;
 use App\Http\Requests\Auth\PasswordConfirmRequest;
-use App\Models\ResetPassword;
-use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 use App\Repositories\Auth\ResetPasswordRepositories;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Illuminate\Support\Facades\Auth;
+
 class AuthService implements AuthServiceInterface
 {
     use Loggable;
@@ -71,7 +72,7 @@ class AuthService implements AuthServiceInterface
             'email' => $request->string('email'),
             'password' => $request->string('password'),
         ];
-
+        $this->auth->claims(['guard' => Common::API]);
         $this->auth->setTTL(self::ACCESS_TOKEN_TIME_TO_LIVE);
         if(!$accessToken = $this->auth->attempt($credentials)) {
             throw new AuthenticationException(Lang::get('auth.failed'));
@@ -157,26 +158,26 @@ class AuthService implements AuthServiceInterface
     /**
      * @throws UserNotDefinedException
      * @throws TokenExpiredException
-     * @throws TokenInvalidException
+     * @throws ModelNotFoundException|\Exception
      */
     public function resetPassword(PasswordConfirmRequest $request, string $token = ''): bool
     {
         DB::beginTransaction();
         try {
             if(!$tokenReset = $this->resetPasswordRepository->findValidToken($token)){
-                throw new TokenInvalidException(Lang::get('auth.invalid_token'));
+                throw new ModelNotFoundException(Lang::get('auth.invalid_token'));
             }
             if (Carbon::parse($tokenReset->updated_at)->addMinutes(self::RESET_TOKEN_TIME_TO_LIVE * 60)->isPast()) {
                 $tokenReset->delete();
-                throw new TokenExpiredException(Lang::get('auth.token_expired'));
+                throw new UnauthorizedException(Lang::get('auth.token_expired'));
             }
             if(!$user = $this->userRepositories->findByEmail($tokenReset->email)) {
-                throw new UserNotDefinedException(Lang::get('auth.not_found'));
+                throw new ModelNotFoundException(Lang::get('auth.not_found'));
             }
-
-            $this->resetPasswordRepository->updatePassword($user, $request->input('password'));
+            $user->update(['password' => $request->input('password')]);
             $tokenReset->delete();
             $this->refreshRepository->revokeAllUserRefreshTokenAll($user->id);
+            auth()->logout();
             DB::commit();
             return true;
         } catch (\Exception $e)

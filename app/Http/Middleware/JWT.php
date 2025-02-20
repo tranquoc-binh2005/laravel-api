@@ -28,7 +28,13 @@ class JWT
             if(!$request->hasHeader('Authorization')) {
                 return ApiResource::messages(Lang::get('auth.authorization_not_found'));
             }
-            $user = JWTAuth::parseToken()->authenticate();
+            $payload = JWTAuth::parseToken()->getPayload();
+            if($payload->get('guard') !== Common::API){
+                return ApiResource::messages(Lang::get('auth.token_invalid'), Response::HTTP_UNAUTHORIZED);
+            }
+            //$user = JWTAuth::parseToken()->authenticate();
+
+            $user = JWTAuth::guard(Common::API)->parseToken()->authenticate();
         } catch (TokenExpiredException $e) {
             return ApiResource::messages(Lang::get('auth.token_expired'), Response::HTTP_UNAUTHORIZED);
         } catch (TokenInvalidException $e) {

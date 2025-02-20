@@ -1,6 +1,6 @@
 <?php
 
-use App\Enum\V1\Auth\AuthController;
+use App\Http\Controllers\V1\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
 
 
