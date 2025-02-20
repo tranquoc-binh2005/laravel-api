@@ -17,6 +17,13 @@ class BaseRepositories
         return $this->model->create($payload)->fresh();
     }
 
+    public function update(int $id, array $payload = []): Model
+    {
+        $model = $this->findById($id);
+        $model->fill($payload);
+        $model->save();
+        return $model;
+    }
     public function findById(int $id = 0, array $relations = []): mixed
     {
         return $this->model->with($relations)->find($id);
@@ -25,5 +32,10 @@ class BaseRepositories
     public function findByEmail(string $email, array $relations = []): mixed
     {
         return $this->model->with($relations)->where('email', $email)->firstOrFail();
+    }
+
+    public function getFillAble(): array
+    {
+        return $this->model->getFillable();
     }
 }

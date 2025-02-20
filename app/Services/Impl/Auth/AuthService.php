@@ -35,7 +35,7 @@ class AuthService implements AuthServiceInterface
     private RefreshTokenRepositories $refreshRepository;
     private ResetPasswordRepositories $resetPasswordRepository;
     private UserRepositories $userRepositories;
-    private const ACCESS_TOKEN_TIME_TO_LIVE = 5;
+    private const ACCESS_TOKEN_TIME_TO_LIVE = 90;
     private const REFRESH_TOKEN_TIME_TO_LIVE = 15;
     private const RESET_TOKEN_TIME_TO_LIVE = 5;
     public function __construct(
