@@ -11,13 +11,13 @@ Route::group(['prefix' => 'v1/auth'], function() {
     Route::post('/forgot-password', [AuthController::class, 'forgot']);
     Route::put('/reset-password/{token}', [AuthController::class, 'reset']);
 
-    Route::middleware('jwt')->group(function () {
+    Route::middleware('jwt:api')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
     });
 });
 
 Route::group(['prefix' => 'v1'], function() {
-    Route::middleware('jwt')->group(function () {
+    Route::middleware('jwt:api')->group(function () {
         Route::resource('user_catalogues', UserCatalogueController::class)->except(['create', 'edit']);
     });
 });

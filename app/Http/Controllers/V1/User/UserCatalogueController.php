@@ -8,6 +8,7 @@ use App\Http\Controllers\V1\BaseController;
 use App\Services\Interfaces\User\UserCatalogueServiceInterface as UserCatalogueService;
 use Illuminate\Http\JsonResponse;
 use App\Http\Resources\User\UserCatalogueResource;
+use Illuminate\Http\Request;
 
 class UserCatalogueController extends BaseController {
 
@@ -25,6 +26,11 @@ class UserCatalogueController extends BaseController {
         );
     }
 
+    public function index(Request $request): JsonResponse
+    {
+        return $this->baseIndex($request);
+    }
+
     public function store(StoreRequest $request): JsonResponse
     {
         return $this->baseSave($request);
@@ -33,5 +39,15 @@ class UserCatalogueController extends BaseController {
     public function update(UpdateRequest $request, int $id): JsonResponse
     {
         return $this->baseSave($request, $id);
+    }
+
+    public function show(Request $request, int $id): JsonResponse
+    {
+        return $this->baseShow($id);
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        return $this->baseDestroy($id);
     }
 }

@@ -10,6 +10,7 @@ class UserCatalogueService extends BaseService implements UserCatalogueServiceIn
     use Loggable;
 
     private $repositories;
+    protected $simplerFilter = ['publish', 'user_id'];
     public function __construct(
         UserCatalogueRepositories $repositories
     ){

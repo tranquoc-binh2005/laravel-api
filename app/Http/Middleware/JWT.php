@@ -22,14 +22,14 @@ class JWT
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, string $guard): Response
     {
         try {
             if(!$request->hasHeader('Authorization')) {
                 return ApiResource::messages(Lang::get('auth.authorization_not_found'));
             }
             $payload = JWTAuth::parseToken()->getPayload();
-            if($payload->get('guard') !== Common::API){
+            if($payload->get('guard') !== $guard){
                 return ApiResource::messages(Lang::get('auth.token_invalid'), Response::HTTP_UNAUTHORIZED);
             }
             //$user = JWTAuth::parseToken()->authenticate();
